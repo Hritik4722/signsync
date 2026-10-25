@@ -1,7 +1,6 @@
 /**
- * SignSync — Real-Time Sign Language Recognition Frontend Controller
- * Handles Webcam capture, WebSocket frame transmission, Canvas landmark visualization,
- * Prediction stabilization, and Text Assembly.
+ * SignSync — Real-Time Sign Language Translator
+ * Modern, Human-Centric Controller
  */
 
 // =========================================================
@@ -16,12 +15,42 @@ const state = {
     formedText: "",
     lastSmoothedLetter: null,
     lastLetterAddedTime: 0,
-    letterHoldThresholdMs: 1200, // Cooldown before repeating the same held letter
+    letterHoldThresholdMs: 1200,
     fps: 0,
     frameCount: 0,
     lastFpsUpdateTime: performance.now(),
     waitingForServerResponse: false,
 };
+
+// Quick gesture guide data
+const ASL_GUIDE_DATA = [
+    { letter: "A", hint: "Fist, thumb upright beside index" },
+    { letter: "B", hint: "Flat hand, 4 fingers up, thumb in" },
+    { letter: "C", hint: "Fingers curved like letter C" },
+    { letter: "D", hint: "Index up, other fingers touch thumb" },
+    { letter: "E", hint: "Fingers curled onto palm" },
+    { letter: "F", hint: "Index & thumb touch, 3 fingers up" },
+    { letter: "G", hint: "Index & thumb point horizontal" },
+    { letter: "H", hint: "Index & middle fingers horizontal" },
+    { letter: "I", hint: "Pinky straight up, others closed" },
+    { letter: "J", hint: "Pinky traces J in air" },
+    { letter: "K", hint: "Index up, middle forward, thumb in" },
+    { letter: "L", hint: "L-shape: thumb & index at 90°" },
+    { letter: "M", hint: "3 fingers over thumb" },
+    { letter: "N", hint: "2 fingers over thumb" },
+    { letter: "O", hint: "All fingers touch thumb in O-ring" },
+    { letter: "P", hint: "K-shape pointing downward" },
+    { letter: "Q", hint: "G-shape pointing downward" },
+    { letter: "R", hint: "Index and middle fingers crossed" },
+    { letter: "S", hint: "Fist with thumb across fingers" },
+    { letter: "T", hint: "Thumb tucked under index finger" },
+    { letter: "U", hint: "Index & middle together upright" },
+    { letter: "V", hint: "Peace sign: Index & middle apart" },
+    { letter: "W", hint: "3 fingers up: index, middle, ring" },
+    { letter: "X", hint: "Index finger hooked like a hook" },
+    { letter: "Y", hint: "Shaka sign: thumb & pinky out" },
+    { letter: "Z", hint: "Index finger traces Z in air" },
+];
 
 // =========================================================
 // DOM ELEMENTS
@@ -29,9 +58,12 @@ const state = {
 const elements = {
     webcam: document.getElementById("webcam"),
     canvas: document.getElementById("landmark-canvas"),
-    placeholder: document.getElementById("camera-placeholder"),
-    feedLiveIndicator: document.getElementById("feed-live-indicator"),
-    detectionPill: document.getElementById("detection-pill"),
+    cameraPlaceholder: document.getElementById("camera-placeholder"),
+    cameraHudTop: document.getElementById("camera-hud-top"),
+    cameraHudBottom: document.getElementById("camera-hud-bottom"),
+    hudChar: document.getElementById("hud-char"),
+    hudConfidence: document.getElementById("hud-confidence"),
+    
     btnStart: document.getElementById("btn-start"),
     btnStop: document.getElementById("btn-stop"),
     btnToggleSkeleton: document.getElementById("btn-toggle-skeleton"),
@@ -45,12 +77,14 @@ const elements = {
     predictedChar: document.getElementById("predicted-char"),
     confidenceBadge: document.getElementById("confidence-badge"),
     confidenceBar: document.getElementById("confidence-bar"),
-    rawChar: document.getElementById("raw-char"),
-    smoothedChar: document.getElementById("smoothed-char"),
     handStatus: document.getElementById("hand-status"),
 
+    formedTextBox: document.getElementById("formed-text-box"),
     formedTextContent: document.getElementById("formed-text-content"),
+    emptyTranscriptHint: document.getElementById("empty-transcript-hint"),
     charCounter: document.getElementById("char-counter"),
+    btnFontToggle: document.getElementById("btn-font-toggle"),
+
     btnSpace: document.getElementById("btn-space"),
     btnBackspace: document.getElementById("btn-backspace"),
     btnClear: document.getElementById("btn-clear"),
@@ -60,29 +94,24 @@ const elements = {
     footerConnectionVal: document.getElementById("footer-connection-val"),
     footerFpsVal: document.getElementById("footer-fps-val"),
     footerHandVal: document.getElementById("footer-hand-val"),
+
+    btnOpenGuide: document.getElementById("btn-open-guide"),
+    btnCloseGuide: document.getElementById("btn-close-guide"),
+    guideModal: document.getElementById("guide-modal"),
+    aslGuideGrid: document.getElementById("asl-guide-grid"),
 };
 
 const ctx = elements.canvas.getContext("2d");
 
-// Offscreen canvas used to grab frames from the video element and encode to JPEG
 const captureCanvas = document.createElement("canvas");
 const captureCtx = captureCanvas.getContext("2d");
 
-// =========================================================
-// MEDIAPIPE HAND TOPOLOGY (Connections)
-// =========================================================
 const HAND_CONNECTIONS = [
-    // Palm base
     [0, 1], [0, 5], [5, 9], [9, 13], [13, 17], [0, 17],
-    // Thumb
     [1, 2], [2, 3], [3, 4],
-    // Index finger
     [5, 6], [6, 7], [7, 8],
-    // Middle finger
     [9, 10], [10, 11], [11, 12],
-    // Ring finger
     [13, 14], [14, 15], [15, 16],
-    // Pinky
     [17, 18], [18, 19], [19, 20],
 ];
 
@@ -132,13 +161,13 @@ function connectWebSocket() {
 }
 
 function updateConnectionStatus(status, text) {
-    elements.badgeConnection.className = `status-pill ${status}`;
+    elements.badgeConnection.className = `status-indicator ${status}`;
     elements.connectionStatusText.textContent = text;
     elements.footerConnectionVal.textContent = text;
 }
 
 // =========================================================
-// CAMERA INITIALIZATION & FRAME CAPTURE
+// CAMERA INITIALIZATION & STREAMING
 // =========================================================
 async function startCamera() {
     if (state.isCameraRunning) return;
@@ -161,30 +190,27 @@ async function startCamera() {
             const vw = elements.webcam.videoWidth || 640;
             const vh = elements.webcam.videoHeight || 480;
 
-            // Sync canvas dimensions with video feed
             elements.canvas.width = vw;
             elements.canvas.height = vh;
 
-            // High-resolution capture canvas for crisp hand joint recognition
             captureCanvas.width = 640;
             captureCanvas.height = 480;
 
-            elements.placeholder.style.display = "none";
-            elements.feedLiveIndicator.style.display = "flex";
-            elements.btnStart.disabled = true;
-            elements.btnStop.disabled = false;
+            // Transition UI from Hero to Active Live View
+            elements.cameraPlaceholder.style.display = "none";
+            elements.cameraHudTop.style.display = "flex";
+            elements.cameraHudBottom.style.display = "flex";
             state.isCameraRunning = true;
 
             if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
                 connectWebSocket();
             }
 
-            // Stream frames at ~14 FPS (70ms interval) for smooth tracking & low latency
             state.frameInterval = setInterval(captureAndSendFrame, 70);
         };
     } catch (err) {
         console.error("[Camera] Access error:", err);
-        alert(`Could not access webcam: ${err.message || err.name}. Please ensure camera permissions are allowed.`);
+        alert(`Could not access camera: ${err.message || err.name}. Please ensure permissions are granted.`);
     }
 }
 
@@ -204,11 +230,9 @@ function stopCamera() {
     elements.webcam.srcObject = null;
     clearCanvas();
 
-    elements.placeholder.style.display = "flex";
-    elements.feedLiveIndicator.style.display = "none";
-    elements.detectionPill.style.display = "none";
-    elements.btnStart.disabled = false;
-    elements.btnStop.disabled = true;
+    elements.cameraPlaceholder.style.display = "flex";
+    elements.cameraHudTop.style.display = "none";
+    elements.cameraHudBottom.style.display = "none";
     state.isCameraRunning = false;
 
     resetPredictionDisplay();
@@ -219,15 +243,11 @@ function captureAndSendFrame() {
         return;
     }
 
-    // Skip frame if server is still processing to prevent network queue lag
     if (state.waitingForServerResponse) {
         return;
     }
 
-    // Capture clear 640x480 frame for crisp finger detection
     captureCtx.drawImage(elements.webcam, 0, 0, captureCanvas.width, captureCanvas.height);
-
-    // 0.82 quality gives crisp hand boundaries without artifacts
     const base64Data = captureCanvas.toDataURL("image/jpeg", 0.82);
 
     try {
@@ -257,48 +277,43 @@ function updateFps() {
 // PREDICTION & LANDMARK RENDERING
 // =========================================================
 function handleServerPrediction(data) {
-    if (!data.success) {
-        return;
-    }
+    if (!data.success) return;
 
     clearCanvas();
 
-    // 1. Hand presence & landmark rendering
     if (data.hand_detected && data.landmarks && data.landmarks.length > 0) {
-        elements.footerHandVal.textContent = "Hand Tracked (21 points)";
-        elements.handStatus.textContent = "Hand Active";
-        elements.detectionPill.style.display = "block";
-
+        elements.footerHandVal.textContent = "Hand detected";
         if (state.showSkeleton) {
             drawLandmarks(data.landmarks);
         }
     } else {
-        elements.footerHandVal.textContent = "No Hand Detected";
-        elements.handStatus.textContent = "Awaiting Hand";
-        elements.detectionPill.style.display = "none";
+        elements.footerHandVal.textContent = "Waiting for hand";
         resetPredictionDisplay();
         return;
     }
 
-    // 2. Gesture classification values
     const rawLetter = data.letter;
     const confidence = data.confidence || 0.0;
     const smoothedLetter = data.smoothed_letter;
-
-    // Raw display
-    elements.rawChar.textContent = rawLetter || "—";
+    const displayChar = smoothedLetter || rawLetter;
     const confPercent = Math.round(confidence * 100);
-    elements.confidenceBadge.textContent = `${confPercent}% Confidence`;
+
+    // Update HUD
+    elements.hudChar.textContent = displayChar || "—";
+    elements.hudConfidence.textContent = `${confPercent}%`;
+
+    // Update Hero Card
+    elements.confidenceBadge.textContent = `${confPercent}% Match`;
     elements.confidenceBar.style.width = `${confPercent}%`;
 
-    // Smoothed display
-    if (smoothedLetter) {
-        elements.smoothedChar.textContent = smoothedLetter;
-        elements.predictedChar.textContent = smoothedLetter;
+    if (displayChar) {
+        elements.predictedChar.textContent = displayChar;
         elements.predictedChar.classList.add("updated");
         setTimeout(() => elements.predictedChar.classList.remove("updated"), 150);
+        elements.handStatus.textContent = `Signing: ${displayChar}`;
+    }
 
-        // 3. Assemble text automatically with anti-duplication cooldown
+    if (smoothedLetter) {
         processTextAccumulation(smoothedLetter);
     }
 }
@@ -324,9 +339,9 @@ function drawLandmarks(landmarks) {
         y: lm[1] * h,
     }));
 
-    // 1. Draw connections
+    // Soft, elegant glow lines
     ctx.lineWidth = 3.5;
-    ctx.strokeStyle = "rgba(15, 139, 141, 0.9)"; // Teal stroke
+    ctx.strokeStyle = "rgba(20, 184, 166, 0.9)";
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
@@ -339,18 +354,17 @@ function drawLandmarks(landmarks) {
         }
     }
 
-    // 2. Draw landmark joints
     for (let i = 0; i < points.length; i++) {
         const pt = points[i];
         ctx.beginPath();
         const isFingertip = [4, 8, 12, 16, 20].includes(i);
-        const radius = isFingertip ? 6 : 4;
+        const radius = isFingertip ? 5.5 : 3.5;
 
         ctx.arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isFingertip ? "#10B981" : "#FFFFFF"; // Green fingertips, white joints
+        ctx.fillStyle = isFingertip ? "#10B981" : "#FFFFFF";
         ctx.fill();
         ctx.lineWidth = 1.5;
-        ctx.strokeStyle = "#1E3A5F"; // Navy border
+        ctx.strokeStyle = "#0F172A";
         ctx.stroke();
     }
 }
@@ -361,14 +375,15 @@ function clearCanvas() {
 
 function resetPredictionDisplay() {
     elements.predictedChar.textContent = "—";
-    elements.rawChar.textContent = "—";
-    elements.smoothedChar.textContent = "—";
-    elements.confidenceBadge.textContent = "0% Confidence";
+    elements.hudChar.textContent = "—";
+    elements.hudConfidence.textContent = "0%";
+    elements.confidenceBadge.textContent = "0% Match";
     elements.confidenceBar.style.width = "0%";
+    elements.handStatus.textContent = "Waiting for sign";
 }
 
 // =========================================================
-// FORMED TEXT ACTIONS
+// TEXT ASSEMBLE ACTIONS
 // =========================================================
 function appendCharacter(char) {
     state.formedText += char;
@@ -395,7 +410,8 @@ function clearText() {
 
 function updateFormedTextUI() {
     elements.formedTextContent.textContent = state.formedText;
-    elements.charCounter.textContent = `${state.formedText.length} chars`;
+    elements.charCounter.textContent = `${state.formedText.length} letters`;
+    elements.emptyTranscriptHint.style.display = state.formedText.length > 0 ? "none" : "block";
 }
 
 function speakText() {
@@ -415,14 +431,38 @@ async function copyText() {
     if (!state.formedText) return;
     try {
         await navigator.clipboard.writeText(state.formedText);
-        const origText = elements.btnCopy.querySelector("span").textContent;
+        const originalText = elements.btnCopy.querySelector("span").textContent;
         elements.btnCopy.querySelector("span").textContent = "Copied!";
         setTimeout(() => {
-            elements.btnCopy.querySelector("span").textContent = origText;
+            elements.btnCopy.querySelector("span").textContent = originalText;
         }, 1500);
     } catch (e) {
         console.error("Copy failed:", e);
     }
+}
+
+// =========================================================
+// ASL GUIDE MODAL
+// =========================================================
+function populateGuide() {
+    elements.aslGuideGrid.innerHTML = "";
+    ASL_GUIDE_DATA.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "asl-card";
+        card.innerHTML = `
+            <div class="asl-card-letter">${item.letter}</div>
+            <div class="asl-card-hint">${item.hint}</div>
+        `;
+        elements.aslGuideGrid.appendChild(card);
+    });
+}
+
+function openGuide() {
+    elements.guideModal.style.display = "flex";
+}
+
+function closeGuide() {
+    elements.guideModal.style.display = "none";
 }
 
 // =========================================================
@@ -433,7 +473,8 @@ elements.btnStop.addEventListener("click", stopCamera);
 
 elements.btnToggleSkeleton.addEventListener("click", () => {
     state.showSkeleton = !state.showSkeleton;
-    elements.skeletonToggleText.textContent = state.showSkeleton ? "Hide Skeleton" : "Show Skeleton";
+    elements.btnToggleSkeleton.classList.toggle("active", state.showSkeleton);
+    elements.skeletonToggleText.textContent = state.showSkeleton ? "Skeleton" : "Hidden";
     if (!state.showSkeleton) clearCanvas();
 });
 
@@ -443,23 +484,36 @@ elements.btnClear.addEventListener("click", clearText);
 elements.btnSpeak.addEventListener("click", speakText);
 elements.btnCopy.addEventListener("click", copyText);
 
-// Check model status via health endpoint
+// Font size toggle for accessibility
+elements.btnFontToggle.addEventListener("click", () => {
+    elements.formedTextBox.classList.toggle("large-font");
+});
+
+// Guide modal
+elements.btnOpenGuide.addEventListener("click", openGuide);
+elements.btnCloseGuide.addEventListener("click", closeGuide);
+elements.guideModal.addEventListener("click", (e) => {
+    if (e.target === elements.guideModal) closeGuide();
+});
+
+// Model health check
 async function checkHealth() {
     try {
         const res = await fetch("/health");
         const data = await res.json();
         if (data.model_loaded) {
-            elements.badgeModel.className = "status-pill ready";
-            elements.modelStatusText.textContent = `Model Ready (${data.vocabulary.length} Signs)`;
+            elements.badgeModel.className = "status-indicator ready";
+            elements.modelStatusText.textContent = `${data.vocabulary.length} Signs Ready`;
         } else {
-            elements.badgeModel.className = "status-pill warning";
-            elements.modelStatusText.textContent = "Model Not Loaded";
+            elements.badgeModel.className = "status-indicator warning";
+            elements.modelStatusText.textContent = "Model Offline";
         }
     } catch (e) {
-        console.warn("[Health] Failed to fetch health status:", e);
+        console.warn("[Health] Error checking server status:", e);
     }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    populateGuide();
     checkHealth();
 });
