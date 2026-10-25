@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignSync — AI-Based Sign Language Recognition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Top Navigation / Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+                        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+                        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+                        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="brand-title">Sign<span class="accent">Sync</span></h1>
+                    <p class="brand-subtitle">AI-Based Sign Language Recognition</p>
+                </div>
+            </div>
+
+            <div class="header-badges">
+                <div id="badge-model" class="status-pill {% if model_ready %}ready{% else %}warning{% endif %}">
+                    <span class="dot"></span>
+                    <span id="model-status-text">{% if model_ready %}Model Active{% else %}Model Not Loaded{% endif %}</span>
+                </div>
+                <div id="badge-connection" class="status-pill disconnected">
+                    <span class="dot"></span>
+                    <span id="connection-status-text">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Left Side: Camera & Live Feed -->
+            <section class="card camera-card">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <h2>Live Camera Feed</h2>
+                        <span class="card-tagline">Real-time MediaPipe Hand Landmark Detection</span>
+                    </div>
+                    <div class="feed-indicator" id="feed-live-indicator" style="display: none;">
+                        <span class="pulse-dot"></span> LIVE
+                    </div>
+                </div>
+
+                <div class="video-wrapper">
+                    <video id="webcam" autoplay playsinline muted></video>
+                    <canvas id="landmark-canvas"></canvas>
+
+                    <!-- Placeholder overlay when camera is off -->
+                    <div id="camera-placeholder" class="camera-placeholder">
+                        <div class="placeholder-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                                <circle cx="12" cy="13" r="3"></circle>
+                            </svg>
+                        </div>
+                        <h3>Camera is Inactive</h3>
+                        <p>Click "Start Camera" below to initiate video capture & gesture detection.</p>
+                    </div>
+
+                    <!-- Landmark coordinates debug mini-chip -->
+                    <div id="detection-pill" class="detection-pill" style="display: none;">
+                        <span id="landmark-point-count">21 Landmarks Tracked</span>
+                    </div>
+                </div>
+
+                <!-- Camera Controls -->
+                <div class="controls-bar">
+                    <button id="btn-start" class="btn btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        <span>Start Camera</span>
+                    </button>
+                    <button id="btn-stop" class="btn btn-secondary" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="6" y="6" width="12" height="12"></rect>
+                        </svg>
+                        <span>Stop Camera</span>
+                    </button>
+                    <button id="btn-toggle-skeleton" class="btn btn-ghost" title="Toggle skeleton overlay">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <span id="skeleton-toggle-text">Hide Skeleton</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Right Side: Predictions & Text Assembly -->
+            <section class="prediction-column">
+                <!-- Recognized Letter Card -->
+                <div class="card current-sign-card">
+                    <div class="card-header">
+                        <h2>Recognized Sign</h2>
+                        <span id="confidence-badge" class="confidence-badge">0% Confidence</span>
+                    </div>
+
+                    <div class="sign-display-zone">
+                        <div id="predicted-char" class="huge-char">—</div>
+                        <div class="confidence-bar-container">
+                            <div id="confidence-bar" class="confidence-bar-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="sign-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Raw Prediction</span>
+                            <span id="raw-char" class="meta-val">—</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Stabilized (Smoothed)</span>
+                            <span id="smoothed-char" class="meta-val highlight">—</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Status</span>
+                            <span id="hand-status" class="meta-val">Awaiting Hand</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formed Sentence / Output Card -->
+                <div class="card text-output-card">
+                    <div class="card-header">
+                        <h2>Constructed Text</h2>
+                        <div class="char-count" id="char-counter">0 chars</div>
+                    </div>
+
+                    <div class="text-display-box" id="formed-text-box" placeholder="Recognized gestures will assemble here...">
+                        <span id="formed-text-content"></span><span class="blinking-cursor">|</span>
+                    </div>
+
+                    <div class="text-action-bar">
+                        <div class="action-buttons-left">
+                            <button id="btn-space" class="btn btn-secondary btn-sm" title="Insert space">
+                                Space
+                            </button>
+                            <button id="btn-backspace" class="btn btn-secondary btn-sm" title="Delete last character">
+                                ⌫ Backspace
+                            </button>
+                            <button id="btn-clear" class="btn btn-secondary btn-sm" title="Clear all text">
+                                Clear
+                            </button>
+                        </div>
+                        <div class="action-buttons-right">
+                            <button id="btn-speak" class="btn btn-ghost btn-sm" title="Text to Speech">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                </svg>
+                                <span>Speak</span>
+                            </button>
+                            <button id="btn-copy" class="btn btn-primary btn-sm" title="Copy to clipboard">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Workflow Info Pill -->
+                <div class="flow-summary-card">
+                    <div class="flow-step">
+                        <span class="step-num">1</span>
+                        <span>Webcam</span>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <span class="step-num">2</span>
+                        <span>MediaPipe</span>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <span class="step-num">3</span>
+                        <span>Random Forest</span>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <span class="step-num">4</span>
+                        <span>Text Output</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Status Bar -->
+        <footer class="app-footer">
+            <div class="footer-item">
+                <span class="label">WS Connection:</span>
+                <span id="footer-connection-val">Disconnected</span>
+            </div>
+            <div class="footer-item">
+                <span class="label">Processing FPS:</span>
+                <span id="footer-fps-val">0</span>
+            </div>
+            <div class="footer-item">
+                <span class="label">Hand Tracking:</span>
+                <span id="footer-hand-val">No Hand Detected</span>
+            </div>
+            <div class="footer-item ms-auto">
+                <span class="label">SignSync Prototype</span>
+                <span>v1.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
