@@ -339,9 +339,9 @@ function drawLandmarks(landmarks) {
         y: lm[1] * h,
     }));
 
-    // Soft, elegant glow lines
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = "rgba(20, 184, 166, 0.9)";
+    // Natural warm ivory lines with subtle shadow for clarity on any skin tone
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(250, 248, 245, 0.85)";
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
@@ -354,17 +354,18 @@ function drawLandmarks(landmarks) {
         }
     }
 
+    // Natural tactile joint markers (terracotta fingertips, warm ivory knuckles)
     for (let i = 0; i < points.length; i++) {
         const pt = points[i];
         ctx.beginPath();
         const isFingertip = [4, 8, 12, 16, 20].includes(i);
-        const radius = isFingertip ? 5.5 : 3.5;
+        const radius = isFingertip ? 5 : 3.5;
 
         ctx.arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isFingertip ? "#10B981" : "#FFFFFF";
+        ctx.fillStyle = isFingertip ? "#C86D51" : "#FAF8F5";
         ctx.fill();
         ctx.lineWidth = 1.5;
-        ctx.strokeStyle = "#0F172A";
+        ctx.strokeStyle = "#231F20";
         ctx.stroke();
     }
 }

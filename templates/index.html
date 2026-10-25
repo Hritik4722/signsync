@@ -6,7 +6,7 @@
     <title>SignSync — Real-Time Sign Language Translator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
             <div class="nav-left">
                 <div class="app-logo">
                     <div class="logo-mark">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
                             <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
                             <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
@@ -25,34 +25,29 @@
                     </div>
                     <div>
                         <span class="logo-name">SignSync</span>
-                        <span class="logo-badge">Live Translator</span>
+                        <span class="logo-tagline">Real-Time Sign Language Translation</span>
                     </div>
                 </div>
             </div>
 
             <div class="nav-center">
-                <div class="mode-selector">
-                    <button class="mode-pill active" id="btn-mode-asl">
-                        <span class="mode-dot"></span> ASL Alphabet
-                    </button>
-                    <button class="mode-pill" id="btn-open-guide">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
-                        <span>Sign Guide (A–Z)</span>
-                    </button>
-                </div>
+                <button class="nav-action-pill" id="btn-open-guide">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Alphabet Reference (A–Z)</span>
+                </button>
             </div>
 
             <div class="nav-right">
-                <div id="badge-connection" class="status-indicator disconnected">
-                    <span class="indicator-pulse"></span>
+                <div id="badge-connection" class="status-chip disconnected">
+                    <span class="status-dot"></span>
                     <span id="connection-status-text">Disconnected</span>
                 </div>
-                <div id="badge-model" class="status-indicator {% if model_ready %}ready{% else %}warning{% endif %}">
-                    <span class="indicator-dot"></span>
+                <div id="badge-model" class="status-chip {% if model_ready %}ready{% else %}warning{% endif %}">
+                    <span class="status-dot"></span>
                     <span id="model-status-text">{% if model_ready %}26 Signs Active{% else %}Model Offline{% endif %}</span>
                 </div>
             </div>
@@ -60,57 +55,55 @@
 
         <!-- Main Workspace -->
         <main class="translator-workspace">
-            <!-- Left: Viewfinder Card -->
-            <div class="viewfinder-card">
+            <!-- Left: Natural Viewfinder -->
+            <section class="viewport-card">
                 <div class="camera-viewport" id="camera-viewport">
                     <video id="webcam" autoplay playsinline muted></video>
                     <canvas id="landmark-canvas"></canvas>
 
-                    <!-- Inactive Camera Friendly Hero State -->
-                    <div id="camera-placeholder" class="camera-hero-state">
-                        <div class="hero-illustration">
-                            <div class="illustration-ring"></div>
-                            <div class="illustration-hand">
-                                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
-                                    <circle cx="12" cy="13" r="3"></circle>
-                                </svg>
-                            </div>
+                    <!-- Camera Off State (Warm & Welcoming) -->
+                    <div id="camera-placeholder" class="camera-empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                                <circle cx="12" cy="13" r="3"></circle>
+                            </svg>
                         </div>
-                        <h3>Ready to Translate</h3>
-                        <p>Turn on your camera to start translating hand signs into spoken and written words in real time.</p>
-                        <button id="btn-start" class="primary-action-btn">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <h3>Camera is Inactive</h3>
+                        <p>Enable your camera to start translating hand signs into natural text.</p>
+                        <button id="btn-start" class="btn-primary-action">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
                             </svg>
-                            <span>Enable Camera</span>
+                            <span>Start Camera</span>
                         </button>
                     </div>
 
-                    <!-- Floating Camera HUD Overlay (Visible when camera is active) -->
+                    <!-- Clean Floating Top HUD (Active View) -->
                     <div class="camera-hud-top" id="camera-hud-top" style="display: none;">
-                        <div class="live-tag">
+                        <div class="hud-live-tag">
                             <span class="live-dot"></span> LIVE
                         </div>
-                        <div class="live-detection-chip" id="hud-detection-chip">
-                            <span class="chip-label">Detected:</span>
+                        <div class="hud-sign-chip" id="hud-detection-chip">
+                            <span class="chip-label">Current:</span>
                             <span class="chip-char" id="hud-char">—</span>
-                            <span class="chip-confidence" id="hud-confidence">0%</span>
+                            <span class="chip-conf" id="hud-confidence">0%</span>
                         </div>
                     </div>
 
+                    <!-- Clean Floating Bottom Controls -->
                     <div class="camera-hud-bottom" id="camera-hud-bottom" style="display: none;">
-                        <div class="hud-controls">
-                            <button id="btn-toggle-skeleton" class="hud-icon-btn active" title="Toggle Skeleton Overlay">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <div class="hud-controls-pill">
+                            <button id="btn-toggle-skeleton" class="hud-btn active" title="Toggle Landmark Skeleton">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
-                                    <path d="M12 16v-4"></path>
-                                    <path d="M12 8h.01"></path>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
                                 </svg>
                                 <span id="skeleton-toggle-text">Skeleton</span>
                             </button>
-                            <button id="btn-stop" class="hud-stop-btn" title="Stop Camera">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <button id="btn-stop" class="hud-btn-danger" title="Stop Camera">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="6" y="6" width="12" height="12" rx="2"></rect>
                                 </svg>
                                 <span>Stop</span>
@@ -119,84 +112,66 @@
                     </div>
                 </div>
 
-                <div class="viewfinder-footer">
-                    <div class="tip-pill">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                        <span>Hold sign steady for ~1 second to append character automatically</span>
-                    </div>
+                <div class="viewport-caption">
+                    <p>Hold a sign in view for ~1 second to automatically append the letter to your transcript.</p>
                 </div>
-            </div>
+            </section>
 
-            <!-- Right: Translation & Speech Card -->
-            <div class="translation-card">
-                <!-- Current Active Sign Floating Hero -->
-                <div class="active-sign-banner">
-                    <div class="sign-preview-block">
-                        <div class="sign-avatar" id="predicted-char">—</div>
-                        <div class="sign-meta-text">
-                            <span class="sign-title" id="hand-status">Waiting for sign</span>
-                            <div class="confidence-pill" id="confidence-badge">0% Match</div>
+            <!-- Right: Translation Notebook -->
+            <section class="transcript-card">
+                <!-- Current Letter Highlight Banner -->
+                <div class="current-letter-box">
+                    <div class="letter-avatar" id="predicted-char">—</div>
+                    <div class="letter-details">
+                        <div class="letter-status-line" id="hand-status">Waiting for gesture</div>
+                        <div class="letter-confidence-line">
+                            <span class="conf-text" id="confidence-badge">0% match</span>
+                            <div class="conf-meter-track">
+                                <div class="conf-meter-fill" id="confidence-bar" style="width: 0%;"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="sign-meter-wrapper">
-                        <div class="sign-meter-bar" id="confidence-bar" style="width: 0%;"></div>
                     </div>
                 </div>
 
-                <!-- Live Conversation / Transcript Box -->
-                <div class="transcript-section">
-                    <div class="transcript-header">
-                        <div class="header-label">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                            <span>Translated Speech</span>
-                        </div>
-                        <div class="transcript-tools">
-                            <button id="btn-font-toggle" class="tool-btn" title="Adjust text size">
-                                <span style="font-size: 0.85rem; font-weight: 700;">aA</span>
+                <!-- Live Sentence / Transcript Canvas -->
+                <div class="transcript-paper">
+                    <div class="paper-header">
+                        <span class="paper-title">Translated Message</span>
+                        <div class="paper-meta">
+                            <button id="btn-font-toggle" class="btn-text-size" title="Toggle font size">
+                                aA
                             </button>
-                            <span class="char-badge" id="char-counter">0 letters</span>
+                            <span class="paper-char-count" id="char-counter">0 characters</span>
                         </div>
                     </div>
 
-                    <div class="transcript-body" id="transcript-body">
-                        <div class="transcript-text" id="formed-text-box">
+                    <div class="paper-content" id="transcript-body">
+                        <div class="paper-text" id="formed-text-box">
                             <span id="formed-text-content"></span>
-                            <span class="natural-cursor"></span>
+                            <span class="paper-cursor"></span>
                         </div>
-                        <div class="empty-transcript-hint" id="empty-transcript-hint">
-                            Signs you show to the camera will form sentences here...
+                        <div class="paper-hint" id="empty-transcript-hint">
+                            Recognized signs will appear here as you sign...
                         </div>
                     </div>
 
-                    <!-- Transcript Actions (Human friendly buttons) -->
-                    <div class="transcript-actions">
-                        <div class="action-cluster-left">
-                            <button id="btn-space" class="action-btn text-action" title="Add space between words">
-                                <span>Space</span>
-                            </button>
-                            <button id="btn-backspace" class="action-btn text-action" title="Delete last character">
-                                <span>⌫ Delete</span>
-                            </button>
-                            <button id="btn-clear" class="action-btn text-action secondary" title="Clear translation">
-                                <span>Clear</span>
-                            </button>
+                    <!-- Human Toolbar (Substack / Notion feel) -->
+                    <div class="paper-toolbar">
+                        <div class="toolbar-group">
+                            <button id="btn-space" class="btn-toolbar" title="Add space">Space</button>
+                            <button id="btn-backspace" class="btn-toolbar" title="Delete character">⌫ Delete</button>
+                            <button id="btn-clear" class="btn-toolbar muted" title="Clear all text">Clear</button>
                         </div>
-                        <div class="action-cluster-right">
-                            <button id="btn-speak" class="action-btn voice-action" title="Read text aloud">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <div class="toolbar-group">
+                            <button id="btn-speak" class="btn-toolbar accent" title="Read text aloud">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                                     <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                                 </svg>
-                                <span>Speak Aloud</span>
+                                <span>Speak</span>
                             </button>
-                            <button id="btn-copy" class="action-btn copy-action" title="Copy to clipboard">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <button id="btn-copy" class="btn-toolbar primary" title="Copy text to clipboard">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                 </svg>
@@ -206,24 +181,17 @@
                     </div>
                 </div>
 
-                <!-- Discreet System Status Footer inside the card -->
-                <div class="subtle-status-bar">
-                    <div class="status-item">
-                        <span class="status-bullet">●</span>
-                        <span id="footer-connection-val">Offline</span>
-                    </div>
-                    <div class="status-item">
-                        <span id="footer-fps-val">0 fps</span>
-                    </div>
-                    <div class="status-item">
-                        <span id="footer-hand-val">Camera idle</span>
-                    </div>
+                <!-- Natural Discreet Footnote -->
+                <div class="transcript-footnote">
+                    <span>Connection: <strong id="footer-connection-val">Offline</strong></span>
+                    <span>Speed: <strong id="footer-fps-val">0 fps</strong></span>
+                    <span id="footer-hand-val">Ready</span>
                 </div>
-            </div>
+            </section>
         </main>
     </div>
 
-    <!-- Hidden compatibility elements to support existing JS hooks gracefully -->
+    <!-- Hidden compatibility hooks for existing event bindings -->
     <div style="display: none;">
         <span id="raw-char">—</span>
         <span id="smoothed-char">—</span>
@@ -231,19 +199,19 @@
         <div id="feed-live-indicator"></div>
     </div>
 
-    <!-- ASL Reference Sheet Modal (Human accessibility feature) -->
-    <div class="modal-overlay" id="guide-modal" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-header">
+    <!-- ASL Reference Modal (Tactile Card Layout) -->
+    <div class="modal-backdrop" id="guide-modal" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-head">
                 <div>
-                    <h3>ASL Alphabet Reference</h3>
-                    <p>American Sign Language hand shapes (A through Z)</p>
+                    <h3 class="modal-title">ASL Alphabet Reference</h3>
+                    <p class="modal-sub">Quick guide for standard American Sign Language hand shapes</p>
                 </div>
-                <button class="modal-close-btn" id="btn-close-guide">&times;</button>
+                <button class="modal-close-button" id="btn-close-guide">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="asl-grid" id="asl-guide-grid">
-                    <!-- Populated dynamically via JS with all 26 letters and description hints -->
+            <div class="modal-scrollable">
+                <div class="asl-cards-grid" id="asl-guide-grid">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
         </div>
